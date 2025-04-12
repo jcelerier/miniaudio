@@ -16247,6 +16247,10 @@ static ma_result ma_thread_create__posix(ma_thread* pThread, ma_thread_priority 
     }
 
     if (result != 0) {
+        if(result == EPERM && priority == ma_thread_priority_realtime) {
+            // try again in non-realtime as we may permission errors upon pthread_create
+            return ma_thread_create__posix(pThread, ma_thread_priority_normal, stackSize, entryProc, pData);
+        }
         return ma_result_from_errno(result);
     }
 
@@ -28207,7 +28211,7 @@ static ma_result ma_device_start__alsa(ma_device* pDevice)
     }
 
     if (pDevice->type == ma_device_type_playback || pDevice->type == ma_device_type_duplex) {
-        /*        
+        /*
         When data is written to the device we wait for the device to get ready to receive data with poll(). In my testing
         I have observed that poll() can sometimes block forever unless the device is started explicitly with snd_pcm_start()
         or some data is written with snd_pcm_writei().
@@ -34500,7 +34504,7 @@ static ma_result ma_device_init_internal__coreaudio(ma_context* pContext, ma_dev
             #endif
         }
 
-        
+
         status = ((ma_AudioUnitSetProperty_proc)pContext->coreaudio.AudioUnitSetProperty)(pData->audioUnit, kAudioUnitProperty_StreamFormat, formatScope, formatElement, &bestFormat, sizeof(bestFormat));
         if (status != noErr) {
             ((ma_AudioComponentInstanceDispose_proc)pContext->coreaudio.AudioComponentInstanceDispose)(pData->audioUnit);
@@ -38506,7 +38510,7 @@ error_disconnected:
                 ma_device_stop(pDevice);    /* Do a full device stop so we set internal state correctly. */
             }
         }
-        
+
         result = MA_SUCCESS;
     }
 done:
